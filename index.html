@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f6f7f2" />
+    <meta name="description" content="SPIの言語・非言語を、解き方ノート・ドリル・自動復習で練習する個人用アプリ（非公式）" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SPIトレーナー" />
+    <title>SPIトレーナー</title>
+    <script>
+      // 表示テーマを、画面が描かれる前に反映する（ちらつき防止）
+      try {
+        var d = JSON.parse(localStorage.getItem('spi-trainer:data') || 'null')
+        var t = d && d.settings && d.settings.theme
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
