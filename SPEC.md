@@ -1,7 +1,7 @@
 # SPI対策アプリ 仕様書（仮称：SPIトレーナー）
 
 - 作成日: 2026-10-09
-- 状態: **v0.9 実装・動作確認済み（2026-10-10）。GitHub への公開待ち**
+- 状態: **v0.9 公開済み（2026-10-10）** https://bonchibon1027-lgtm.github.io/spi-trainer/
 - 場所: `C:\Claude\spi-trainer`
 
 ---
