@@ -41,7 +41,7 @@ function mulText(a: Fr, b: Fr): string {
 function fracPads(ans: Fr): { label: string; value: number }[] {
   const out: { label: string; value: number }[] = []
   const push = (n: number, d: number) => {
-    if (n <= 0 || d <= 0 || n > d) return
+    if (n <= 0 || d <= 0 || n >= d) return // 1 以上の値（総額の全部など）は選択肢にしない
     out.push(fItem(fr(n, d)))
   }
   const { n, d } = ans
@@ -62,7 +62,7 @@ function fracPads(ans: Fr): { label: string; value: number }[] {
 
 /** 分数の選択肢を作る（間違いの候補は優先度順。足りない分は埋め草で補う） */
 function fracChoices(rng: Rng, ans: Fr, wrongs: Fr[]) {
-  const cands = [...wrongs.filter((w) => w.n > 0 && w.n <= w.d).map(fItem), ...fracPads(ans)]
+  const cands = [...wrongs.filter((w) => w.n > 0 && w.n < w.d).map(fItem), ...fracPads(ans)]
   return mixedSorted(rng, fItem(ans), cands)
 }
 
