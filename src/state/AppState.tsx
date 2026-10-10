@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Attempt, AttemptMode, Question } from '../types'
 import { setImportedQuestions } from '../lib/bank'
 import { isoToDateStr, todayStr } from '../lib/date'
+import { applyMockRecord, type MockAttemptEntry, type MockResult } from '../lib/mock'
 import { applyPracticeResult, applyReviewResult, resultFromQuestion } from '../lib/review'
 import {
   loadData,
@@ -29,6 +30,11 @@ type Store = {
    * mode が 'review' のときは reviewKey（復習リストの項目のキー）が必要。
    */
   recordAnswer: (q: Question, mode: AttemptMode, outcome: AnswerOutcome, reviewKey?: string) => void
+  /**
+   * 模試の終了時に1回だけ呼ぶ。回答した問題と時間切れの問題を回答の記録（mode: 'mock'）に足し、
+   * 既存の復習ルールで復習リストに反映し、模試の結果を保存する。
+   */
+  recordMock: (entries: MockAttemptEntry[], result: MockResult) => void
   addFlag: (questionKey: string, memo: string) => void
   removeFlag: (questionKey: string) => void
   /** バックアップから丸ごと置き換える */
@@ -61,17 +67,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
   const [data, setData] = useState<AppData>(initial.data)
   const [recovered, setRecovered] = useState(initial.recovered)
-  const [saveFailed, setSaveFailed] = useState(false)
-  const first = useRef(true)
+  const [saveFailed, setSaveFailed] = useState(initial.saveBlocked)
 
-  // 保存。読み込んだだけの最初の1回は書き戻さない（壊れたデータを退避したあとに上書きする場合を除く）
+  // 保存。読み込んだだけ（まだ何も変えていない）なら書き戻さない。
+  // 実行回数ではなく「初期データから変わったか」で判定する（開発時の StrictMode で effect が2回動いても書き戻さない）。
+  // 壊れたデータを退避して初期化したときは、すぐに保存する。
+  // 元のデータを守るために保存を止めているとき（saveBlocked）は、保存せず「保存できない」と表示し続ける。
   useEffect(() => {
-    if (first.current) {
-      first.current = false
-      if (!initial.recovered) return
+    if (data === initial.data && !initial.recovered) return
+    if (initial.saveBlocked) {
+      setSaveFailed(true)
+      return
     }
     setSaveFailed(!saveData(data))
-  }, [data, initial.recovered])
+  }, [data, initial])
 
   useEffect(() => {
     applyTheme(data.settings.theme)
@@ -79,7 +88,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const dark =
         data.settings.theme === 'dark' ||
         (data.settings.theme === 'auto' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#14181b' : '#f6f7f2')
+      // 上部のバーの色: ライトは青、ダークは紺（index.css の --primary / --bg に合わせる）
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0e1726' : '#1f6fe5')
     } catch {
       // theme-color は見た目の補助なので失敗しても続ける
     }
@@ -126,6 +136,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const recordMock = useCallback<Store['recordMock']>((entries, result) => {
+    setData((d) => {
+      // 同じ模試を二重に記録しない（更新関数は何度呼ばれても同じ結果になるようにしておく）
+      if (d.mockResults.some((m) => m.id === result.id)) return d
+      const applied = applyMockRecord(d.attempts, d.reviews, entries, result.at)
+      return { ...d, attempts: applied.attempts, reviews: applied.reviews, mockResults: [...d.mockResults, result] }
+    })
+  }, [])
+
   const addFlag = useCallback((questionKey: string, memo: string) => {
     const flag: Flag = { questionKey, memo: memo.trim(), at: new Date().toISOString() }
     setData((d) => ({ ...d, flags: [...d.flags.filter((f) => f.questionKey !== questionKey), flag] }))
@@ -153,12 +172,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dismissRecovered: () => setRecovered(false),
       updateSettings,
       recordAnswer,
+      recordMock,
       addFlag,
       removeFlag,
       replaceAll,
       setImported,
     }),
-    [data, recovered, saveFailed, updateSettings, recordAnswer, addFlag, removeFlag, replaceAll, setImported],
+    [data, recovered, saveFailed, updateSettings, recordAnswer, recordMock, addFlag, removeFlag, replaceAll, setImported],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

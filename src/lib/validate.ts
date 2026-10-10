@@ -1,4 +1,4 @@
-import type { Note, Question } from '../types'
+import type { Figure, Note, NoteExample, Question, Table, TreeNode } from '../types'
 import { isTopicId } from '../data/topics'
 
 // 問題データの検査。生成問題・作成問題・取り込み問題のすべてに使う。
@@ -88,25 +88,220 @@ export function correctChoiceText(q: Question): string | undefined {
   return undefined
 }
 
+// ---- 解き方ノート ----
+
+const TONES = ['base', 'accent', 'ok', 'ng', 'warn', 'muted']
+
+function checkTone(label: string, tone: unknown, errors: string[]) {
+  if (tone !== undefined && !TONES.includes(tone as string)) errors.push(`${label} の tone が不正: ${String(tone)}`)
+}
+
+function checkTable(label: string, t: Table | undefined, errors: string[]) {
+  if (!t || !Array.isArray(t.headers) || !Array.isArray(t.rows)) {
+    errors.push(`${label} の table が不正`)
+    return
+  }
+  const w = t.headers.length
+  if (w === 0) errors.push(`${label}.headers が空`)
+  t.rows.forEach((r, i) => {
+    if (!Array.isArray(r) || r.length !== w) errors.push(`${label}.rows[${i}] の列数が見出しと違う`)
+  })
+}
+
+function checkTree(label: string, nodes: TreeNode[] | undefined, depth: number, errors: string[]) {
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    errors.push(`${label} が空`)
+    return
+  }
+  if (depth > 3) errors.push(`${label} は3段まで`)
+  nodes.forEach((n, i) => {
+    checkText(`${label}[${i}].label`, n.label, errors)
+    checkTone(`${label}[${i}]`, n.tone, errors)
+    if (n.children !== undefined) checkTree(`${label}[${i}].children`, n.children, depth + 1, errors)
+  })
+}
+
+export function validateFigure(label: string, f: Figure, errors: string[]): void {
+  if (!f || typeof f !== 'object') {
+    errors.push(`${label} が不正`)
+    return
+  }
+  if (f.caption !== undefined) checkText(`${label}.caption`, f.caption, errors)
+  switch (f.type) {
+    case 'tape':
+      if (!f.rows?.length) errors.push(`${label}.rows が空`)
+      f.rows?.forEach((r, i) => {
+        if (r.label !== undefined) checkText(`${label}.rows[${i}].label`, r.label, errors)
+        if (r.total !== undefined) checkText(`${label}.rows[${i}].total`, r.total, errors)
+        if (!r.segments?.length) errors.push(`${label}.rows[${i}].segments が空`)
+        r.segments?.forEach((s, j) => {
+          checkText(`${label}.rows[${i}].segments[${j}].text`, s.text, errors)
+          if (!(typeof s.size === 'number' && s.size > 0)) errors.push(`${label}.rows[${i}].segments[${j}].size は正の数`)
+          checkTone(`${label}.rows[${i}].segments[${j}]`, s.tone, errors)
+        })
+      })
+      break
+    case 'venn2':
+      if (!Array.isArray(f.labels) || f.labels.length !== 2) errors.push(`${label}.labels は2つ`)
+      else f.labels.forEach((s, i) => checkText(`${label}.labels[${i}]`, s, errors))
+      checkText(`${label}.onlyA`, f.onlyA, errors)
+      checkText(`${label}.both`, f.both, errors)
+      checkText(`${label}.onlyB`, f.onlyB, errors)
+      if (f.outside !== undefined) checkText(`${label}.outside`, f.outside, errors)
+      if (f.total !== undefined) checkText(`${label}.total`, f.total, errors)
+      break
+    case 'line': {
+      if (!Array.isArray(f.points) || f.points.length < 2) {
+        errors.push(`${label}.points は2つ以上`)
+        break
+      }
+      f.points.forEach((p, i) => {
+        if (typeof p.at !== 'number' || !Number.isFinite(p.at)) errors.push(`${label}.points[${i}].at は数値`)
+        checkText(`${label}.points[${i}].label`, p.label, errors)
+        if (p.sub !== undefined) checkText(`${label}.points[${i}].sub`, p.sub, errors)
+      })
+      const ats = f.points.map((p) => p.at)
+      const min = Math.min(...ats)
+      const max = Math.max(...ats)
+      if (min === max) errors.push(`${label}.points の位置がすべて同じ`)
+      f.spans?.forEach((s, i) => {
+        checkText(`${label}.spans[${i}].text`, s.text, errors)
+        if (!(s.from >= min && s.to <= max && s.from < s.to)) errors.push(`${label}.spans[${i}] の範囲が不正`)
+        checkTone(`${label}.spans[${i}]`, s.tone, errors)
+      })
+      break
+    }
+    case 'flow':
+      if (!f.items?.length) errors.push(`${label}.items が空`)
+      f.items?.forEach((it, i) => {
+        if (typeof it === 'string') {
+          if (it.trim() === '' || it.length > 3) errors.push(`${label}.items[${i}] の記号が不正: ${it}`)
+          return
+        }
+        checkText(`${label}.items[${i}].title`, it.title, errors)
+        it.lines?.forEach((s, j) => checkText(`${label}.items[${i}].lines[${j}]`, s, errors))
+        checkTone(`${label}.items[${i}]`, it.tone, errors)
+      })
+      break
+    case 'tree':
+      checkTree(`${label}.nodes`, f.nodes, 1, errors)
+      break
+    case 'table':
+      checkTable(label, f.table, errors)
+      f.highlight?.forEach(([r, c], i) => {
+        if (!f.table?.rows?.[r] || c < 0 || c >= f.table.headers.length) errors.push(`${label}.highlight[${i}] が表の外`)
+      })
+      break
+    case 'slots':
+      if (!f.rows?.length) errors.push(`${label}.rows が空`)
+      f.rows?.forEach((r, i) => {
+        if (r.label !== undefined) checkText(`${label}.rows[${i}].label`, r.label, errors)
+        if (!r.cells?.length) errors.push(`${label}.rows[${i}].cells が空`)
+        r.cells?.forEach((c, j) => {
+          if (typeof c.text !== 'string') errors.push(`${label}.rows[${i}].cells[${j}].text が不正`)
+          if (c.head !== undefined) checkText(`${label}.rows[${i}].cells[${j}].head`, c.head, errors)
+          checkTone(`${label}.rows[${i}].cells[${j}]`, c.tone, errors)
+        })
+      })
+      break
+    default:
+      errors.push(`${label}.type が不正: ${String((f as { type?: unknown }).type)}`)
+  }
+}
+
+function checkExample(label: string, e: NoteExample, errors: string[]) {
+  if (!e || typeof e !== 'object') {
+    errors.push(`${label} がない`)
+    return
+  }
+  checkText(`${label}.stem`, e.stem, errors)
+  checkText(`${label}.answer`, e.answer, errors)
+  if (e.table) checkTable(`${label}.table`, e.table, errors)
+  if (e.figure) validateFigure(`${label}.figure`, e.figure, errors)
+  if (!Array.isArray(e.steps) || e.steps.length < 2) errors.push(`${label}.steps は2つ以上`)
+  e.steps?.forEach((s, i) => {
+    if (typeof s !== 'object' || s === null) {
+      errors.push(`${label}.steps[${i}] は { text, calc?, figure? } の形`)
+      return
+    }
+    checkText(`${label}.steps[${i}].text`, s.text, errors)
+    if (s.calc !== undefined) checkText(`${label}.steps[${i}].calc`, s.calc, errors)
+    if (s.figure) validateFigure(`${label}.steps[${i}].figure`, s.figure, errors)
+  })
+}
+
 export function validateNote(n: Note): string[] {
   const errors: string[] = []
   if (!isTopicId(n.topic)) errors.push(`topic が不正: ${n.topic}`)
   checkText('summary', n.summary, errors)
-  if (!n.patterns?.length) errors.push('patterns が空')
-  if (!n.examples?.length) errors.push('examples が空')
+  if (!Array.isArray(n.keyPoints) || n.keyPoints.length < 1 || n.keyPoints.length > 4) errors.push('keyPoints は1〜4個')
+  n.keyPoints?.forEach((s, i) => checkText(`keyPoints[${i}]`, s, errors))
+  if (!Array.isArray(n.formulas)) errors.push('formulas がない')
   n.formulas?.forEach((f, i) => {
     checkText(`formulas[${i}].label`, f.label, errors)
     checkText(`formulas[${i}].body`, f.body, errors)
+    checkText(`formulas[${i}].example`, f.example, errors)
   })
+  if (!Array.isArray(n.patterns) || n.patterns.length < 2) errors.push('patterns は2つ以上')
   n.patterns?.forEach((p, i) => {
     checkText(`patterns[${i}].title`, p.title, errors)
-    p.steps.forEach((s, j) => checkText(`patterns[${i}].steps[${j}]`, s, errors))
+    checkText(`patterns[${i}].lead`, p.lead, errors)
+    if (p.point !== undefined) checkText(`patterns[${i}].point`, p.point, errors)
+    checkExample(`patterns[${i}].example`, p.example, errors)
   })
-  n.examples?.forEach((e, i) => {
-    checkText(`examples[${i}].stem`, e.stem, errors)
-    checkText(`examples[${i}].answer`, e.answer, errors)
-    e.steps.forEach((s, j) => checkText(`examples[${i}].steps[${j}]`, s, errors))
+  if (!Array.isArray(n.pitfalls) || n.pitfalls.length === 0) errors.push('pitfalls が空')
+  n.pitfalls?.forEach((p, i) => {
+    if (typeof p !== 'object' || p === null) {
+      errors.push(`pitfalls[${i}] は { wrong, right } の形`)
+      return
+    }
+    checkText(`pitfalls[${i}].wrong`, p.wrong, errors)
+    checkText(`pitfalls[${i}].right`, p.right, errors)
   })
-  n.pitfalls?.forEach((s, i) => checkText(`pitfalls[${i}]`, s, errors))
   return errors
+}
+
+function figureTexts(f: Figure | undefined): string[] {
+  if (!f) return []
+  const cap = f.caption ? [f.caption] : []
+  switch (f.type) {
+    case 'tape':
+      return [...cap, ...f.rows.flatMap((r) => [r.label ?? '', r.total ?? '', ...r.segments.map((s) => s.text)])]
+    case 'venn2':
+      return [...cap, ...f.labels, f.onlyA, f.both, f.onlyB, f.outside ?? '', f.total ?? '']
+    case 'line':
+      return [...cap, ...f.points.flatMap((p) => [p.label, p.sub ?? '']), ...(f.spans ?? []).map((s) => s.text)]
+    case 'flow':
+      return [...cap, ...f.items.flatMap((it) => (typeof it === 'string' ? [] : [it.title, ...(it.lines ?? [])]))]
+    case 'tree': {
+      const walk = (ns: TreeNode[]): string[] => ns.flatMap((n) => [n.label, ...walk(n.children ?? [])])
+      return [...cap, ...walk(f.nodes)]
+    }
+    case 'table':
+      return [...cap, ...f.table.headers, ...f.table.rows.flat()]
+    case 'slots':
+      return [...cap, ...f.rows.flatMap((r) => [r.label ?? '', ...r.cells.flatMap((c) => [c.head ?? '', c.text])])]
+  }
+}
+
+/** ノートの例題をすべて返す（推論の総当たり検証などに使う） */
+export function noteExamples(n: Note): NoteExample[] {
+  return n.patterns.map((p) => p.example)
+}
+
+/** ノートの中の文字をすべて返す（途中式の計算チェックなどに使う）。空文字は除く */
+export function noteTexts(n: Note): string[] {
+  const ex = (e: NoteExample) => [
+    e.stem,
+    e.answer,
+    ...figureTexts(e.figure),
+    ...e.steps.flatMap((s) => [s.text, s.calc ?? '', ...figureTexts(s.figure)]),
+  ]
+  return [
+    n.summary,
+    ...n.keyPoints,
+    ...n.formulas.flatMap((f) => [f.label, f.body, f.example]),
+    ...n.patterns.flatMap((p) => [p.title, p.lead, p.point ?? '', ...ex(p.example)]),
+    ...n.pitfalls.flatMap((p) => [p.wrong, p.right]),
+  ].filter((s) => s !== '')
 }

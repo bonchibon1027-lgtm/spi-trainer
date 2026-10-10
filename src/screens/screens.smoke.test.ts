@@ -1,16 +1,22 @@
 import { createElement as h } from 'react'
 import { renderToString } from 'react-dom/server'
-import { MemoryRouter } from 'react-router-dom'
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import App from '../App'
+import { routes } from '../App'
 import { AppProvider } from '../state/AppState'
 import { SessionSummary, type SessionResult } from '../components/PracticeSession'
+import { MockSession } from '../components/MockSession'
+import { MockResultView } from '../components/MockResults'
+import { MockHistory } from '../components/MockHistory'
 import { NoteView } from '../components/NoteView'
 import { QuestionView, Steps } from '../components/QuestionView'
 import { GENERATORS } from '../lib/bank'
 import { AUTHORED_QUESTIONS, noteFiles } from '../content'
 import { addDays, todayStr } from '../lib/date'
+import { buildMock, buildMockResult, startRun, tickRun, type MockResult, type MockSource } from '../lib/mock'
 import { STORAGE_KEY } from '../lib/storage'
+import { TOPICS } from '../data/topics'
+import { isTopicOpen } from '../lib/availability'
 import type { Note, Question } from '../types'
 
 // 画面の「最初の描画」が例外なく出ることの確認（ブラウザなしで動く簡易テスト）。
@@ -36,8 +42,24 @@ function clean(html: string): string {
   return html.replace(/<!-- -->/g, '')
 }
 
+// 練習・模試の途中で戻るボタンを止めるため、画面は「データルーター」で動く。テストでも同じ画面の一覧（routes）を使う
 function render(path: string): string {
-  return clean(renderToString(h(AppProvider, null, h(MemoryRouter, { initialEntries: [path] }, h(App)))))
+  const router = createMemoryRouter(routes, { initialEntries: [path] })
+  try {
+    return clean(renderToString(h(AppProvider, null, h(RouterProvider, { router }))))
+  } finally {
+    router.dispose()
+  }
+}
+
+/** 部品を、データルーターの中に置いて描画する（useBlocker を使う部品用） */
+function renderInRouter(element: ReturnType<typeof h>): string {
+  const router = createMemoryRouter([{ path: '/', element }], { initialEntries: ['/'] })
+  try {
+    return clean(renderToString(h(AppProvider, null, h(RouterProvider, { router }))))
+  } finally {
+    router.dispose()
+  }
 }
 
 // react-router がサーバー描画のとき出す useLayoutEffect の警告は、このテストでは無関係
@@ -65,16 +87,18 @@ describe('画面の描画（記録なし）', () => {
     ['/topics', '損益算'],
     ['/topics?s=verbal', '二語の関係'],
     ['/topic/nv-profit', '練習する'],
-    ['/topic/nv-discount', '近日追加'],
+    ['/topic/nv-discount', '練習する'],
     ['/topic/nv-inference', '推論'],
     ['/topic/unknown', '分野が見つかりません'],
     ['/note/nv-profit', '解き方ノート'],
     ['/note/unknown', '分野が見つかりません'],
     ['/drill/nv-profit?n=5', '1 / 5'],
-    ['/drill/nv-discount', '近日追加'],
+    ['/drill/nv-discount?n=5', '1 / 5'],
     ['/drill/unknown', '分野が見つかりません'],
     ['/review', '今日の復習はありません'],
     ['/review?go=1', '今日の復習はありません'],
+    ['/mock', '本番形式の模試'],
+    ['/mock?k=mini', 'ミニ模試'],
     ['/stats', '全体'],
     ['/settings', '学習記録のバックアップ'],
     ['/nothing-here', 'ページが見つかりません'],
@@ -85,6 +109,14 @@ describe('画面の描画（記録なし）', () => {
     })
   }
 
+  // 問題がまだない分野（公開段階の途中）は「近日追加」になる。全分野がそろったら確かめる対象がなくなる
+  it('問題のない分野は「近日追加」', () => {
+    for (const t of TOPICS.filter((x) => !isTopicOpen(x))) {
+      expect(render(`/topic/${t.id}`), t.id).toContain('近日追加')
+      expect(render(`/drill/${t.id}`), t.id).toContain('近日追加')
+    }
+  })
+
   it('ドリル画面に時間ゲージ・回答ボタン・目安が出る', () => {
     const html = render('/drill/nv-profit?n=5')
     expect(html).toContain('回答する')
@@ -94,6 +126,78 @@ describe('画面の描画（記録なし）', () => {
 
   it('記録がなければホームは「計算の基礎」をすすめる', () => {
     expect(render('/')).toContain('計算の基礎')
+  })
+
+  it('ホームの模試カードは使える（準備中ではない）', () => {
+    const html = render('/')
+    expect(html).toContain('模試に挑戦する')
+    expect(html).not.toContain('準備中です')
+  })
+
+  it('模試の開始画面: ルールと「はじめる」。まだ受けていなければ前回の結果は出ない', () => {
+    const html = render('/mock')
+    for (const s of ['電卓は使えません', '1問ごとに制限時間', '前の問題には戻れません', '記録されません', 'はじめる']) {
+      expect(html).toContain(s)
+    }
+    expect(html).not.toContain('前回')
+    expect(render('/mock?k=mini')).toContain('ミニ模試（15分）')
+    expect(render('/mock')).toContain('テストセンター風 模試（35分）')
+  })
+
+  it('模試の記録がなければ、分析に「まだ受けていません」と出る', () => {
+    expect(render('/stats')).toContain('まだ受けていません')
+  })
+})
+
+describe('画面の描画（模試の記録あり）', () => {
+  const mk = (id: string, kind: 'full' | 'mini', correct: number, total: number, at: string): MockResult => ({
+    id,
+    kind,
+    at,
+    total,
+    correct,
+    timeouts: 2,
+    unanswered: 1,
+    durationSec: 1500,
+    bySection: { verbal: { total: 5, correct: 3 }, nonverbal: { total: total - 5, correct: correct - 3 } },
+    byTopic: { 'nv-profit': { total: 2, correct: 1 } },
+  })
+  const data = {
+    version: 2,
+    settings: { drillSize: 5, theme: 'light' },
+    attempts: [],
+    reviews: [],
+    flags: [],
+    importedQuestions: [],
+    mockResults: [
+      mk('full-1', 'full', 18, 30, '2026-10-08T12:00:00.000Z'),
+      mk('mini-1', 'mini', 9, 12, '2026-10-09T12:00:00.000Z'),
+    ],
+  }
+
+  beforeEach(() => {
+    g.localStorage = memoryStorage(data)
+  })
+
+  it('ホームには最後に受けた模試、開始画面には選んだ種類の前回の正答率が出る', () => {
+    const home = render('/')
+    expect(home).toContain('前回')
+    expect(home).toContain('75%') // 最後に受けたのはミニ模試（15分）
+    expect(home).toContain('15分')
+    expect(render('/mock')).toContain('正答率 60%') // 35分の前回
+    expect(render('/mock?k=mini')).toContain('正答率 75%')
+  })
+
+  it('分析に模試の記録（棒グラフと一覧）が出る。最後に受けた種類が先に開く', () => {
+    const html = render('/stats')
+    expect(html).toContain('模試の記録')
+    expect(html).toContain('mock-col-bar')
+    expect(html).toContain('9 / 12問 正解')
+    expect(html).toContain('時間切れ 2問')
+  })
+
+  it('設定: バックアップを読み込む前の確認に模試の記録の数が出る部品がある', () => {
+    expect(render('/settings')).toContain('学習記録のバックアップ')
   })
 })
 
@@ -208,19 +312,97 @@ describe('部品の描画', () => {
     expect(html).toContain('問2')
   })
 
-  it('ノート: 公式・型・例題・よくある間違い', () => {
+  it('ノート: 覚えること・公式・型・例題・よくある間違い', () => {
     const note: Note = {
       topic: 'nv-profit',
       summary: '原価と{{1/2}}を考えます。',
-      formulas: [{ label: '定価', body: '原価 × (1 + 利益率)' }],
-      patterns: [{ title: '型1', steps: ['手順1', '手順2'] }],
-      examples: [{ stem: '例題文', steps: ['式1', '式2'], answer: '300円' }],
-      pitfalls: ['割合を足してしまう'],
+      keyPoints: ['まず原価を決める', '割合は元にする量で変わる'],
+      formulas: [{ label: '定価', body: '原価 × (1 + 利益率)', example: '原価 200円・利益率 {{1/4}} なら 200 × {{5/4}} = 250円' }],
+      patterns: [
+        {
+          title: '型1',
+          lead: '原価から定価を求める型です。',
+          example: {
+            stem: '例題文1',
+            steps: [{ text: '手順1', calc: '200 × 1.5 = 300' }, { text: '手順2' }],
+            answer: '300円',
+          },
+          point: '先に原価をつかむ',
+        },
+        {
+          title: '型2',
+          lead: '売値から原価を求める型です。',
+          example: {
+            stem: '例題文2',
+            steps: [{ text: '手順A' }, { text: '手順B', calc: '300 ÷ 1.5 = 200' }],
+            answer: '200円',
+          },
+        },
+      ],
+      pitfalls: [{ wrong: '割合を足してしまう', right: '元にする量を確かめてからかける' }],
     }
     const html = clean(renderToString(h(NoteView, { note })))
-    for (const s of ['覚える公式', '型と解き方', '例題', 'よくある間違い', '解き方を見る', '答え: 300円']) {
+    for (const s of ['原価と', '定価', '手順1', '手順B', '300円', '割合を足してしまう']) {
       expect(html).toContain(s)
     }
+  })
+})
+
+describe('模試の部品の描画', () => {
+  // 公開段階に関係なく動くよう、実際の問題の取り出し口ではなく、決まった問題を返す差し替え用の口を使う
+  const authored: Question[] = AUTHORED_QUESTIONS.filter((q) => q.topic === 'vb-relation' || q.topic === 'nv-inference')
+  const source: MockSource = {
+    isOpen: (t) => authored.some((q) => q.topic === t) || GENERATORS.some((x) => x.topic === t),
+    authoredPool: (t) => authored.filter((q) => q.topic === t),
+    generate: (t, n, seed) => {
+      const gens = GENERATORS.filter((x) => x.topic === t)
+      return Array.from({ length: n }, (_, i) => gens[i % gens.length].generate(seed + i))
+    },
+  }
+  const build = buildMock('mini', source, new Set(), 3)
+
+  beforeEach(() => {
+    g.localStorage = memoryStorage()
+  })
+
+  it('模試の実施画面: 2本のゲージ・区分と問題数・次へ・やめる', () => {
+    const html = renderInRouter(h(MockSession, { build, onExit: () => undefined, finishActions: null }))
+    for (const s of ['ミニ模試', 'この問題', '全体', 'あと', '言語 1 /', '次へ', '模試をやめる', 'class="stem"']) {
+      expect(html).toContain(s)
+    }
+    expect(html).toContain('class="mock-head"')
+    // 模試中は正解や解説を出さない・ヒントもない
+    expect(html).not.toContain('ヒント')
+    expect(html).not.toContain('解説')
+    expect(html).not.toContain('is-correct')
+  })
+
+  it('模試の結果画面: 正答率・目安の注意・区分別・分野別・問題ごと', () => {
+    const t0 = 1_000_000
+    const totalMs = build.totalSec * 1000
+    // 数問は時間切れ、最後のほうは全体の時間切れ（未回答）になる走らせ方
+    const run = tickRun(startRun(t0), build.questions, totalMs, t0 + totalMs / 2)
+    const end = tickRun(run, build.questions, totalMs, t0 + totalMs)
+    expect(end.finishedAt).toBeDefined()
+    const result = buildMockResult('mini', build.questions, end)
+    const html = clean(renderToString(h(MockResultView, { build, run: end, result, actions: h('span', null, 'ボタン') })))
+    for (const s of ['正答率', 'アプリ独自の目安', '本番の評価', '時間切れ', '未回答', '言語', '非言語', '分野ごとの結果', '問題ごとの結果', '問1', 'ボタン']) {
+      expect(html, s).toContain(s)
+    }
+    expect(html).not.toMatch(/NaN|undefined|\[object/)
+  })
+
+  it('模試の記録の部品: 空のとき・棒と一覧', () => {
+    expect(clean(renderToString(h(MockHistory, { results: [] })))).toContain('まだ受けていません')
+    const results: MockResult[] = [
+      { id: 'a', kind: 'full', at: '2026-10-01T10:00:00.000Z', total: 30, correct: 15, timeouts: 4, unanswered: 0, durationSec: 2100, bySection: { verbal: { total: 12, correct: 7 }, nonverbal: { total: 18, correct: 8 } }, byTopic: {} },
+      { id: 'b', kind: 'full', at: '2026-10-08T10:00:00.000Z', total: 30, correct: 21, timeouts: 1, unanswered: 2, durationSec: 2100, bySection: { verbal: { total: 12, correct: 9 }, nonverbal: { total: 18, correct: 12 } }, byTopic: {} },
+    ]
+    const html = clean(renderToString(h(MockHistory, { results })))
+    expect(html.match(/class="mock-col"/g)).toHaveLength(2)
+    expect(html).toContain('>50<')
+    expect(html).toContain('>70<')
+    expect(html).toContain('21 / 30問 正解')
   })
 })
 

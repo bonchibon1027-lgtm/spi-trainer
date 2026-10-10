@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import rawQuestions from './questions/nv-inference.json'
 import rawNote from './notes/nv-inference.json'
 import type { AuthoredQuestion, Note } from '../types'
+import { noteExamples } from '../lib/validate'
 
 // 推論（nv-inference）の総当たり検証。
 // 各問題について「前提条件を満たすすべての状態」を機械的に列挙し、そこから正解を計算して、
@@ -608,76 +609,179 @@ describe('推論の問題（nv-inference）', () => {
 
   describe('解き方ノートの例題も総当たりで確かめる', () => {
     // 例題は問題文（前提＋問い）が1つの文字列なので、同じ文字列を passage と stem の両方に入れて同じ検査にかける
-    const asQuestion = (key: string, stem: string, answerText: string): AuthoredQuestion => ({
+    const examples = noteExamples(note)
+    const asQuestion = (
+      key: string,
+      stem: string,
+      format: 'single' | 'multi',
+      choices: string[],
+      answer: number | number[],
+    ): AuthoredQuestion => ({
       key,
       topic: 'nv-inference',
       difficulty: 1,
-      format: 'single',
+      format,
       passage: stem,
       stem,
-      choices: MUST_CHOICES,
-      answer: MUST_CHOICES.indexOf(answerText),
+      choices,
+      answer,
       explanation: [],
     })
+    const asMust = (i: number) => {
+      const e = examples[i]
+      expect(MUST_CHOICES, `型${i + 1} の答え`).toContain(e.answer)
+      return asQuestion(`note-example-${i + 1}`, e.stem, 'single', MUST_CHOICES, MUST_CHOICES.indexOf(e.answer))
+    }
+    const asDetermine = (i: number) => {
+      const e = examples[i]
+      expect(DETERMINE_CHOICES, `型${i + 1} の答え`).toContain(e.answer)
+      return asQuestion(`note-example-${i + 1}`, e.stem, 'single', DETERMINE_CHOICES, DETERMINE_CHOICES.indexOf(e.answer))
+    }
+    const ABCD = permutations(['A', 'B', 'C', 'D'])
 
-    it('例題は2問で、答えは選択肢の文言どおり', () => {
-      expect(note.examples.length).toBe(2)
-      for (const e of note.examples) expect(MUST_CHOICES).toContain(e.answer)
+    // 型の並び（タイトルの先頭）と検証のしかたを1対1で対応させる
+    const verifiers: [string, () => void][] = [
+      [
+        '順序・順位の問題（必ず正しいもの）',
+        () => {
+          const q = asMust(0)
+          const conds: Cond<Order>[] = [
+            cond('QはPより先に着いた。', (o) => pos(o, 'Q') < pos(o, 'P')),
+            cond('QはRより先に着いた。', (o) => pos(o, 'Q') < pos(o, 'R')),
+            cond('SはRより先に着いた。', (o) => pos(o, 'S') < pos(o, 'R')),
+          ]
+          expectBullets(q, conds)
+          const claims: Cond<Order>[] = [
+            cond('Qは1位である。', (o) => pos(o, 'Q') === 1),
+            cond('Sは3位以内に着いた。', (o) => pos(o, 'S') <= 3),
+            cond('PはRより後に着いた。', (o) => pos(o, 'P') > pos(o, 'R')),
+          ]
+          expect(must(q, P4, conds, claims, 5).answer).toBe(q.answer)
+        },
+      ],
+      [
+        '順序・順位の問題（「直前」と考えられる順位）',
+        () => {
+          const e = examples[1]
+          const choices = ['1位', '2位', '3位', '4位']
+          const expected = choices.flatMap((c, i) => (e.answer.includes(c) ? [i] : []))
+          const q = asQuestion('note-example-2', e.stem, 'multi', choices, expected)
+          const conds: Cond<Order>[] = [
+            cond('PはQより先に着いた。', (o) => pos(o, 'P') < pos(o, 'Q')),
+            cond('SはRの直前に着いた。', (o) => pos(o, 'S') + 1 === pos(o, 'R')),
+          ]
+          expectBullets(q, conds)
+          expect(multi(q, P4, conds, (o) => `${pos(o, 'Q')}位`, 3).answer).toEqual(expected)
+        },
+      ],
+      [
+        '順序・順位の問題（確定するには）',
+        () => {
+          const q = asDetermine(2)
+          // 並びは「高い順」
+          const conds: Cond<Order>[] = [
+            cond('QはPより低い。', (o) => pos(o, 'Q') > pos(o, 'P')),
+            cond('RはPより低い。', (o) => pos(o, 'R') > pos(o, 'P')),
+            cond('SはQより低い。', (o) => pos(o, 'S') > pos(o, 'Q')),
+          ]
+          expectBullets(q, conds)
+          const infos: [Cond<Order>, Cond<Order>] = [
+            cond('Rは最も低い人ではない。', (o) => pos(o, 'R') !== 4),
+            cond('Qは2番目に高い。', (o) => pos(o, 'Q') === 2),
+          ]
+          expect(determine(q, P4, conds, infos, (o) => o.join(), 3).answer).toBe(q.answer)
+        },
+      ],
+      [
+        '位置の問題',
+        () => {
+          const q = asMust(3)
+          // 並びの添字 + 1 = 席の番号（左から1番）
+          const conds: Cond<Order>[] = [
+            cond('AとBは隣り合っている。', (o) => Math.abs(pos(o, 'A') - pos(o, 'B')) === 1),
+            cond('CはAより左の席に座っている。', (o) => pos(o, 'C') < pos(o, 'A')),
+            cond('DはBより左の席に座っている。', (o) => pos(o, 'D') < pos(o, 'B')),
+          ]
+          expectBullets(q, conds)
+          const claims: Cond<Order>[] = [
+            cond('Aは3番か4番に座っている。', (o) => pos(o, 'A') >= 3),
+            cond('CはDの隣に座っている。', (o) => Math.abs(pos(o, 'C') - pos(o, 'D')) === 1),
+            cond('Cは1番に座っている。', (o) => pos(o, 'C') === 1),
+          ]
+          expect(must(q, ABCD, conds, claims, 4).answer).toBe(q.answer)
+        },
+      ],
+      [
+        '内訳の問題',
+        () => {
+          const q = asMust(4)
+          expect(q.stem).toContain('合わせて10個')
+          expect(q.stem).toContain('どの色の玉も1個以上')
+          // [赤, 白, 青]、どれも1個以上で合計10個
+          const states = tuples(3, 1, 10, (t) => sum(t) === 10)
+          const conds: Cond<number[]>[] = [
+            cond('赤玉は白玉より多い。', ([r, w]) => r > w),
+            cond('青玉は白玉より1個多い。', ([, w, b]) => b === w + 1),
+          ]
+          expectBullets(q, conds)
+          const claims: Cond<number[]>[] = [
+            cond('赤玉は5個以上である。', ([r]) => r >= 5),
+            cond('青玉は赤玉より多い。', ([r, , b]) => b > r),
+            cond('白玉は2個以下である。', ([, w]) => w <= 2),
+          ]
+          expect(must(q, states, conds, claims, 2).answer).toBe(q.answer)
+        },
+      ],
+      [
+        '平均・整数の問題',
+        () => {
+          const q = asMust(5)
+          expect(q.stem).toContain('100点満点')
+          // [A, B, C]、0〜100点の整数
+          const states = tuples(3, 0, 100, (t) => sum(t) === 240)
+          const conds: Cond<number[]>[] = [
+            cond('3人の平均点は80点だった。', (t) => sum(t) / 3 === 80),
+            cond('AはBより点数が低かった。', ([a, b]) => a < b),
+            cond('BはCより点数が低かった。', ([, b, c]) => b < c),
+          ]
+          expectBullets(q, conds)
+          const claims: Cond<number[]>[] = [
+            cond('Bは80点である。', ([, b]) => b === 80),
+            cond('Aは80点より低い。', ([a]) => a < 80),
+            cond('Cは81点以上である。', ([, , c]) => c >= 81),
+          ]
+          expect(must(q, states, conds, claims).answer).toBe(q.answer)
+        },
+      ],
+      [
+        '発言の正誤の問題',
+        () => {
+          const q = asMust(6)
+          const said: Said<string>[] = [
+            { who: 'A', text: '割ったのはBだ。', holds: (c) => c === 'B' },
+            { who: 'B', text: '私は割っていない。', holds: (c) => c !== 'B' },
+            { who: 'C', text: '割ったのはAだ。', holds: (c) => c === 'A' },
+          ]
+          expectSaid(q, said)
+          expect(q.stem).toContain('うそをついているのは1人だけ')
+          const oneLiar = cond('うそをついているのは1人だけ', (c: string) => said.filter((x) => !x.holds(c)).length === 1)
+          const claims: Cond<string>[] = [
+            cond('割ったのはAである。', (c) => c === 'A'),
+            cond('Bはうそをついている。', (c) => !said[1].holds(c)),
+            cond('Cはうそをついている。', (c) => !said[2].holds(c)),
+          ]
+          expect(must(q, NAMES_3, [oneLiar], claims, 1).answer).toBe(q.answer)
+        },
+      ],
+    ]
+
+    it('ノートのすべての型の例題に検証がある', () => {
+      expect(examples.length).toBe(verifiers.length)
+      note.patterns.forEach((p, i) => expect(p.title.startsWith(verifiers[i][0]), p.title).toBe(true))
     })
 
-    it('例題1（順序）: 総当たりの正解と一致する', () => {
-      const e = note.examples[0]
-      const eq = asQuestion('note-example-1', e.stem, e.answer)
-      const conds: Cond<Order>[] = [
-        cond('QはPより先に着いた。', (o) => pos(o, 'Q') < pos(o, 'P')),
-        cond('QはRより先に着いた。', (o) => pos(o, 'Q') < pos(o, 'R')),
-        cond('SはRより先に着いた。', (o) => pos(o, 'S') < pos(o, 'R')),
-      ]
-      expectBullets(eq, conds)
-      const { answer } = must(
-        eq,
-        P4,
-        conds,
-        [
-          cond('Qは1位である。', (o) => pos(o, 'Q') === 1),
-          cond('Sは3位以内に着いた。', (o) => pos(o, 'S') <= 3),
-          cond('PはRより後に着いた。', (o) => pos(o, 'P') > pos(o, 'R')),
-        ],
-        5,
-      )
-      expect(answer).toBe(eq.answer)
-    })
-
-    it('例題2（発言）: 総当たりの正解と、表の○×・うその数が一致する', () => {
-      const e = note.examples[1]
-      const eq = asQuestion('note-example-2', e.stem, e.answer)
-      const said: Said<string>[] = [
-        { who: 'A', text: '割ったのはBだ。', holds: (c) => c === 'B' },
-        { who: 'B', text: '私は割っていない。', holds: (c) => c !== 'B' },
-        { who: 'C', text: '割ったのはAだ。', holds: (c) => c === 'A' },
-      ]
-      expectSaid(eq, said)
-      expect(eq.stem).toContain('うそをついているのは1人だけ')
-      const exactlyOneLiar = cond('うそをついているのは1人だけ', (c: string) => said.filter((x) => !x.holds(c)).length === 1)
-      const { answer } = must(
-        eq,
-        NAMES_3,
-        [exactlyOneLiar],
-        [
-          cond('割ったのはAである。', (c) => c === 'A'),
-          cond('Bはうそをついている。', (c) => !said[1].holds(c)),
-          cond('Cはうそをついている。', (c) => !said[2].holds(c)),
-        ],
-        1,
-      )
-      expect(answer).toBe(eq.answer)
-      // 表の各行（割った人ごと）の ○× とうその数
-      const expectedRows = NAMES_3.map((c) => [
-        `${c}が割った`,
-        ...said.map((x) => (x.holds(c) ? '○' : '×')),
-        `${said.filter((x) => !x.holds(c)).length}人`,
-      ])
-      expect(e.table?.rows).toEqual(expectedRows)
+    verifiers.forEach(([title, verify], i) => {
+      it(`型${i + 1}（${title}）: 総当たりの正解と一致する`, verify)
     })
   })
 

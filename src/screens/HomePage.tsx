@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { getNote } from '../content'
 import { getTopic, releasedTopics } from '../data/topics'
 import { isTopicOpen } from '../lib/availability'
-import { daysBetween, formatDateJa, todayStr } from '../lib/date'
+import { daysBetween, formatDateJa, isoToDateStr, todayStr } from '../lib/date'
+import { lastMockResult, mockAccuracy, MOCK_SPECS } from '../lib/mock'
 import { countDueReviews } from '../lib/review'
 import { bankSource } from '../lib/reviewSource'
 import { computeAllStats, countToday, recommendNext } from '../lib/stats'
@@ -23,6 +24,9 @@ export function HomePage() {
     return recommendNext(candidates, data.attempts.length)
     // 取り込んだ問題（importedQuestions）が変わると、出せる分野も変わる
   }, [data.attempts, data.importedQuestions])
+
+  const lastMock = useMemo(() => lastMockResult(data.mockResults), [data.mockResults])
+  const lastMockDate = lastMock ? isoToDateStr(lastMock.at) : null
 
   const exam = data.settings.examDate
   const left = exam ? daysBetween(today, exam) : null
@@ -110,12 +114,18 @@ export function HomePage() {
         </p>
       </section>
 
-      <section className="card is-disabled" aria-label="模試">
+      <section className="card" aria-label="模試">
         <p className="card-label">本番形式の模試</p>
-        <p className="muted">v1.0で追加予定です。</p>
-        <button type="button" className="btn btn-secondary" disabled>
-          準備中
-        </button>
+        <p className="muted">1問ごとに制限時間がつきます。35分の模試と、15分のミニ模試があります。</p>
+        {lastMock && lastMockDate && (
+          <p className="mock-last">
+            前回（{formatDateJa(lastMockDate)}・{MOCK_SPECS[lastMock.kind].shortLabel}）: 正答率{' '}
+            <strong>{Math.round(mockAccuracy(lastMock) * 100)}%</strong>
+          </p>
+        )}
+        <Link to="/mock" className="btn btn-primary btn-block">
+          模試に挑戦する
+        </Link>
       </section>
 
       <p className="disclaimer">

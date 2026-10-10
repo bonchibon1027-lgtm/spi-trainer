@@ -8,6 +8,7 @@ import { needsReview } from '../lib/review'
 import { clip } from '../lib/text'
 import { useApp } from '../state/AppState'
 import { useImmersive } from '../state/hooks'
+import { useLeaveGuard } from '../state/leaveGuard'
 import { ConfirmDialog, Sheet } from './Modal'
 import { FlagBox } from './FlagBox'
 import { NoteView } from './NoteView'
@@ -47,7 +48,8 @@ export function PracticeSession({ title, mode, items, onExit, finishActions }: P
   const [index, setIndex] = useState(0)
   const [results, setResults] = useState<SessionResult[]>([])
   const [finished, setFinished] = useState(false)
-  const [confirmExit, setConfirmExit] = useState(false)
+  // 途中で戻るボタンなどで抜けようとしたときも、×ボタンと同じ確認を出す。終了画面では止めない
+  const guard = useLeaveGuard(!finished && items.length > 0, onExit)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -74,7 +76,7 @@ export function PracticeSession({ title, mode, items, onExit, finishActions }: P
         <div className="session-count" aria-label={`${items.length}問中${index + 1}問目`}>
           {index + 1} / {items.length}
         </div>
-        <button type="button" className="icon-btn" aria-label="練習をやめる" onClick={() => setConfirmExit(true)}>
+        <button type="button" className="icon-btn" aria-label="練習をやめる" onClick={guard.askExit}>
           ×
         </button>
       </header>
@@ -89,16 +91,13 @@ export function PracticeSession({ title, mode, items, onExit, finishActions }: P
       />
 
       <ConfirmDialog
-        open={confirmExit}
+        open={guard.open}
         title="練習をやめますか？"
         confirmLabel="やめる"
         cancelLabel="続ける"
         danger
-        onConfirm={() => {
-          setConfirmExit(false)
-          onExit()
-        }}
-        onCancel={() => setConfirmExit(false)}
+        onConfirm={guard.leave}
+        onCancel={guard.keep}
       >
         <p>回答した問題の結果は、もう記録されています。今の問題はまだ記録されません。</p>
       </ConfirmDialog>

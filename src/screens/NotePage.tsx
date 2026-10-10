@@ -3,9 +3,34 @@ import { getNote } from '../content'
 import { getTopic, isTopicId } from '../data/topics'
 import { isTopicOpen } from '../lib/availability'
 import { NoteView } from '../components/NoteView'
+import { SAMPLE_NOTE } from '../components/figures/sampleNote'
+
+// 解き方ノートのページ（#/note/<分野ID>）。#/note/sample は、図と見た目の確認用の見本。
+
+function Hero({ kicker, title }: { kicker: string; title: string }) {
+  return (
+    <header className="nt-hero">
+      <p className="nt-kicker">{kicker}</p>
+      <h1 className="nt-title">{title}</h1>
+    </header>
+  )
+}
+
+function SamplePage() {
+  return (
+    <div className="stack">
+      <p className="crumb">
+        <Link to="/topics">← 分野の一覧</Link>
+      </p>
+      <Hero kicker="解き方ノート（見本）" title="割合と比（見本）" />
+      <NoteView note={SAMPLE_NOTE} />
+    </div>
+  )
+}
 
 export function NotePage() {
   const { id = '' } = useParams()
+  if (id === 'sample') return <SamplePage />
   if (!isTopicId(id)) {
     return (
       <div className="stack">
@@ -25,17 +50,11 @@ export function NotePage() {
       <p className="crumb">
         <Link to={`/topic/${id}`}>← {topic.name}</Link>
       </p>
-      <h1 className="page-title">{topic.name}の解き方ノート</h1>
-      {note ? (
-        <NoteView note={note} />
-      ) : (
-        <div className="card">
-          <p className="muted">この分野のノートは準備中です。</p>
-        </div>
-      )}
+      <Hero kicker="解き方ノート" title={topic.name} />
+      <NoteView note={note} />
       {canPractice && (
         <Link to={`/drill/${id}`} className="btn btn-primary btn-block">
-          練習する
+          この分野を練習する
         </Link>
       )}
     </div>

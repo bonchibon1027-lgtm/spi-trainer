@@ -4,6 +4,7 @@ import ratio from './ratio'
 import profit from './profit'
 import speed from './speed'
 import { noteFiles } from '../content'
+import { noteTexts } from '../lib/validate'
 
 // 解説の途中式の計算が合っているかを確かめる（計算の基礎・割合と比・損益算・速さの型）。
 // 考え方は explanation-arithmetic.test.ts と同じ。
@@ -107,18 +108,63 @@ describe('解説の途中式の計算（非言語A）', () => {
   }
 })
 
+// ---- 解き方ノート ----
+// ノートは「説明文（text）」と「計算式1行（calc）」に分かれている。
+// 文字は noteTexts() で全部取り出せる（公式・例・例題の文・図の中の文字を含む）。
+
+/**
+ * 計算式（calc）用のゆるい検査。単位（円・km・分・人 など）や見出し（「行き」など）を取りのぞいて、
+ * 数字と記号だけで「A = B = C」の値が等しいかを調べる。
+ * 取りのぞいたあとに式として読めない部分（「1時間20分」「□」など）は調べない。
+ * 注意: 「1km = 1000m」のような単位の読みかえは、単位をはずすと等しくならないので、calc には書かない。
+ */
+function checkCalc(raw: string): string[] {
+  const errors: string[] = []
+  const line = raw.replace(/(\d),(?=\d{3}(?!\d))/g, '$1')
+  if (!line.includes('=')) return errors
+  for (const clause of line.split(/[。、]/)) {
+    const segs = clause.split('=')
+    if (segs.length < 2) continue
+    const pct = segs.map((s) => /\d\s*%/.test(s))
+    const vals = segs.map((s) => {
+      const expr = s
+        .replace(/\{\{(\d+)\/(\d+)\}\}/g, '($1/$2)')
+        .replace(/[^\d\s()+\-−×÷./]/g, ' ') // 単位や文字は空白に
+        .replace(/\s+/g, ' ')
+        .trim()
+      return expr === '' ? null : evaluate(expr)
+    })
+    for (let i = 0; i + 1 < segs.length; i++) {
+      const a = vals[i]
+      const b = vals[i + 1]
+      if (a === null || b === null) continue
+      const same = Math.abs(a - b) < 1e-9
+      const scaled = (pct[i] || pct[i + 1]) && (Math.abs(a * 100 - b) < 1e-9 || Math.abs(a - b * 100) < 1e-9)
+      if (!same && !scaled) errors.push(`「${segs[i].trim()}」(=${a}) と「${segs[i + 1].trim()}」(=${b}) が等しくない`)
+    }
+  }
+  return errors
+}
+
 describe('解き方ノートの途中式の計算（非言語A）', () => {
+  it('checkCalc 自体の確認', () => {
+    expect(checkCalc('2,000 × 1.3 = 2,600円')).toEqual([])
+    expect(checkCalc('行き 120 ÷ 60 = 2時間、帰り 120 ÷ 40 = 3時間')).toEqual([])
+    expect(checkCalc('{{35/100}} = 35%')).toEqual([])
+    expect(checkCalc('30% + 5% = 35%')).toEqual([])
+    expect(checkCalc('□ = 4 ÷ 0.04 = 100g')).toEqual([])
+    expect(checkCalc('10 + 70 = 80分 = 1時間20分')).toEqual([])
+    expect(checkCalc('2,000 × 1.3 = 2,500円')).not.toEqual([])
+    expect(checkCalc('{{35/100}} = 36%')).not.toEqual([])
+    expect(checkCalc('40 ÷ 60 = {{3/4}}時間')).not.toEqual([])
+  })
+
   for (const topic of ['nv-basics', 'nv-ratio', 'nv-profit', 'nv-speed']) {
     it(`${topic}: ノートの式の数値が合っている`, () => {
       const note = noteFiles[topic]
       expect(note, `${topic}.json がある`).toBeDefined()
-      const lines = [
-        note.summary,
-        ...note.formulas.map((f) => f.body),
-        ...note.patterns.flatMap((p) => p.steps),
-        ...note.examples.flatMap((e) => e.steps),
-        // よくある間違い（pitfalls）には、わざと誤った式を書くことがあるので調べない
-      ]
+      // よくある間違い（pitfalls）には、わざと誤った式を書くことがあるので調べない
+      const lines = noteTexts({ ...note, pitfalls: [] })
       let checked = 0
       for (const line of lines) {
         // 「。」「、」で区切った1文ずつ調べる
@@ -127,7 +173,16 @@ describe('解き方ノートの途中式の計算（非言語A）', () => {
           if (clause.includes(' = ')) checked++
         }
       }
-      expect(checked).toBeGreaterThan(10)
+      expect(checked).toBeGreaterThan(30)
+    })
+
+    it(`${topic}: 計算式（calc）の数値が、単位をはずしても合っている`, () => {
+      const note = noteFiles[topic]
+      const calcs = note.patterns.flatMap((p) => p.example.steps.flatMap((s) => (s.calc ? [s.calc] : [])))
+      expect(calcs.length, `${topic} に calc がある`).toBeGreaterThan(10)
+      for (const calc of calcs) {
+        expect(checkCalc(calc), `${topic}\n${calc}`).toEqual([])
+      }
     })
   }
 })

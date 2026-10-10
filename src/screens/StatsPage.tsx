@@ -14,6 +14,7 @@ import {
 } from '../lib/stats'
 import { useApp } from '../state/AppState'
 import { Segmented, StatusChip } from '../components/Controls'
+import { MockHistory } from '../components/MockHistory'
 import type { Section, TopicMeta } from '../types'
 
 export function StatsPage() {
@@ -41,6 +42,8 @@ export function StatsPage() {
         </dl>
         {overall.attempts === 0 && <p className="muted small">問題を解くと、ここに成績が出ます。</p>}
       </section>
+
+      <MockHistory results={data.mockResults} />
 
       <Segmented
         label="科目"

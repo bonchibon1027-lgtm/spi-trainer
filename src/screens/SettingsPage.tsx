@@ -194,6 +194,10 @@ function BackupSection() {
                 <span>取り込んだ問題</span>
                 <span>{pending.summary.importedQuestions}問</span>
               </li>
+              <li>
+                <span>模試の記録</span>
+                <span>{pending.summary.mockResults}回</span>
+              </li>
             </ul>
             {pending.summary.skipped > 0 && (
               <p className="msg msg-error">形が正しくなく、読み飛ばす記録が{pending.summary.skipped}件あります。</p>

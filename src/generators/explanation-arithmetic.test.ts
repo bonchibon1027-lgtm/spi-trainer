@@ -3,8 +3,10 @@ import combination from './combination'
 import probability from './probability'
 import sets from './sets'
 import { noteFiles } from '../content'
+import { noteExamples, noteTexts } from '../lib/validate'
 
 // 解説の途中式の計算が合っているかを確かめる（場合の数・確率・集合の型）。
+// 解き方ノート（場合の数・確率・集合・推論）の中の式も、同じ方法で確かめる。
 // 「A = B = C」のように = でつながれた数式の部分を取り出し、となり合う数式の値が等しいかを調べる。
 // 例: "5C2 = (5 × 4) ÷ (2 × 1) = 20 ÷ 2 = 10" → (5×4)÷(2×1)、20÷2、10 がすべて同じ値であること。
 // 分数 {{a/b}} も計算できる。文字や記号（□ など）を含む部分は調べない。
@@ -104,22 +106,23 @@ describe('解説の途中式の計算', () => {
     it(`${topic} の解き方ノート: 途中式の数値が合っている`, () => {
       const note = noteFiles[topic]
       expect(note).toBeDefined()
-      const lines = [
-        ...note.formulas.map((f) => f.body),
-        ...note.patterns.flatMap((p) => p.steps),
-        ...note.examples.flatMap((e) => e.steps),
-      ]
+      // よくある間違い（pitfalls）には、わざと誤った式を書くことがあるので調べない
+      const lines = noteTexts({ ...note, pitfalls: [] })
       let checked = 0
       for (const line of lines) {
-        expect(checkLine(line), line).toEqual([])
-        if (line.includes(' = ')) checked++
+        for (const clause of line.split(/[。、]/)) {
+          expect(checkLine(clause), `${topic}\n${line}`).toEqual([])
+          if (clause.includes(' = ')) checked++
+        }
       }
       expect(checked).toBeGreaterThan(5)
     })
 
-    it(`${topic} の解き方ノート: 例題の最後のステップが答えと一致する`, () => {
-      for (const e of noteFiles[topic].examples) {
-        expect(e.steps[e.steps.length - 1]).toBe(`答え: ${e.answer}`)
+    it(`${topic} の解き方ノート: 例題の最後のステップに答えの数が出てくる`, () => {
+      for (const e of noteExamples(noteFiles[topic])) {
+        const last = e.steps[e.steps.length - 1]
+        const core = e.answer.match(/\{\{\d+\/\d+\}\}|\d[\d,.]*/)?.[0]
+        if (core) expect(`${last.text} ${last.calc ?? ''}`, e.stem).toContain(core)
       }
     })
   }

@@ -52,7 +52,13 @@ describe('generators', () => {
       })
 
       it('同じ型でも問題が十分に変わる', () => {
-        const stems = new Set(SEEDS.map((s) => g.generate(s).stem))
+        // 表の読み取りのように、数字が表の中にある型もあるので、表も含めて比べる
+        const stems = new Set(
+          SEEDS.map((s) => {
+            const q = g.generate(s)
+            return q.stem + JSON.stringify(q.table ?? null)
+          }),
+        )
         expect(stems.size).toBeGreaterThanOrEqual(20)
       })
     })

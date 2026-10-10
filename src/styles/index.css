@@ -1,70 +1,73 @@
-/* SPIトレーナー: スマホ優先。色は CSS 変数で定義し、OS のダークモード／設定のテーマで切り替える。 */
+/* SPIトレーナー: スマホ優先。色は CSS 変数で定義し、設定のテーマ（既定はライト）で切り替える。
+   ライトは「白 × 青」: 背景はごく淡い青みの白、カードは白、強調は明るい青。 */
 
 :root {
   color-scheme: light;
-  --bg: #f6f7f2;
+  --bg: #f3f7fd;
   --surface: #ffffff;
-  --surface-2: #eef1e9;
-  --text: #1e2823;
-  --text-sub: #56635c;
-  --border: #d8ddd2;
-  --primary: #3566c9;
-  --primary-strong: #2a53a6;
-  --primary-soft: #e4ecfb;
+  --surface-2: #eaf2fd;
+  --text: #13294b;
+  --text-sub: #4b5f7c;
+  --border: #d3e0f2;
+  --primary: #1f6fe5;
+  --primary-strong: #1556c2;
+  --primary-soft: #e3eefd;
   --on-primary: #ffffff;
-  --ok: #2b8a57;
-  --ok-text: #1d6b41;
-  --ok-soft: #e0f3e8;
-  --ng: #d3453d;
-  --ng-text: #b0322b;
-  --ng-soft: #fbe5e3;
-  --warn: #e0861a;
-  --warn-text: #9a5200;
-  --warn-soft: #fdeed9;
-  --gauge-ok: #3aa56b;
-  --gauge-warn: #e3b21a;
-  --gauge-alert: #ee8a1c;
-  --gauge-over: #d9433b;
-  --gauge-track: #e3e7dd;
-  --st-untouched: #9aa39d;
-  --st-weak: #d3453d;
-  --st-practicing: #3566c9;
-  --st-strong: #2b8a57;
-  --overlay: rgba(20, 28, 24, 0.5);
-  --shadow: 0 1px 2px rgba(20, 30, 25, 0.06), 0 3px 10px rgba(20, 30, 25, 0.05);
+  --ok: #1f9d61;
+  --ok-text: #137046;
+  --ok-soft: #e1f5ea;
+  --ng: #e0453c;
+  --ng-text: #b42f28;
+  --ng-soft: #fde8e6;
+  --warn: #ec8a10;
+  --warn-text: #95500a;
+  --warn-soft: #fff2de;
+  --gauge-ok: #2fb36f;
+  --gauge-warn: #efbe1e;
+  --gauge-alert: #f39224;
+  --gauge-over: #e2463d;
+  --gauge-track: #e2ebf8;
+  --st-untouched: #9fb0c7;
+  --st-weak: #e0453c;
+  --st-practicing: #1f6fe5;
+  --st-strong: #1f9d61;
+  --overlay: rgba(15, 35, 70, 0.45);
+  --shadow: 0 1px 2px rgba(20, 50, 100, 0.06), 0 4px 14px rgba(20, 50, 100, 0.07);
   --radius: 14px;
 }
 
+/* ダーク（設定で「ダーク」、または「自動」かつ端末がダークモードのとき）: 紺を基調にする */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root[data-theme='auto'],
+  :root:not([data-theme]) {
     color-scheme: dark;
-    --bg: #14181b;
-    --surface: #1e2428;
-    --surface-2: #272e33;
-    --text: #e8ecee;
-    --text-sub: #a5b0b6;
-    --border: #364048;
-    --primary: #7da3ee;
-    --primary-strong: #a3bff5;
-    --primary-soft: #23324f;
-    --on-primary: #0b1a33;
+    --bg: #0e1726;
+    --surface: #172336;
+    --surface-2: #1f2e45;
+    --text: #e6eef9;
+    --text-sub: #a5b5cc;
+    --border: #2d405c;
+    --primary: #6ea4ff;
+    --primary-strong: #9cc0ff;
+    --primary-soft: #1b3155;
+    --on-primary: #071a38;
     --ok: #4cc384;
     --ok-text: #86dcaa;
-    --ok-soft: #1c3a2b;
+    --ok-soft: #173a2a;
     --ng: #f06b62;
     --ng-text: #ff9a93;
-    --ng-soft: #442424;
+    --ng-soft: #432326;
     --warn: #f0a24a;
     --warn-text: #ffc47f;
-    --warn-soft: #43321c;
+    --warn-soft: #41301b;
     --gauge-ok: #3fb277;
     --gauge-warn: #e3b82e;
     --gauge-alert: #f0983a;
     --gauge-over: #ee5a51;
-    --gauge-track: #313a40;
-    --st-untouched: #6f7a80;
+    --gauge-track: #26364f;
+    --st-untouched: #6f80a0;
     --st-weak: #f06b62;
-    --st-practicing: #7da3ee;
+    --st-practicing: #6ea4ff;
     --st-strong: #4cc384;
     --overlay: rgba(0, 0, 0, 0.6);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -73,37 +76,38 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #14181b;
-  --surface: #1e2428;
-  --surface-2: #272e33;
-  --text: #e8ecee;
-  --text-sub: #a5b0b6;
-  --border: #364048;
-  --primary: #7da3ee;
-  --primary-strong: #a3bff5;
-  --primary-soft: #23324f;
-  --on-primary: #0b1a33;
+  --bg: #0e1726;
+  --surface: #172336;
+  --surface-2: #1f2e45;
+  --text: #e6eef9;
+  --text-sub: #a5b5cc;
+  --border: #2d405c;
+  --primary: #6ea4ff;
+  --primary-strong: #9cc0ff;
+  --primary-soft: #1b3155;
+  --on-primary: #071a38;
   --ok: #4cc384;
   --ok-text: #86dcaa;
-  --ok-soft: #1c3a2b;
+  --ok-soft: #173a2a;
   --ng: #f06b62;
   --ng-text: #ff9a93;
-  --ng-soft: #442424;
+  --ng-soft: #432326;
   --warn: #f0a24a;
   --warn-text: #ffc47f;
-  --warn-soft: #43321c;
+  --warn-soft: #41301b;
   --gauge-ok: #3fb277;
   --gauge-warn: #e3b82e;
   --gauge-alert: #f0983a;
   --gauge-over: #ee5a51;
-  --gauge-track: #313a40;
-  --st-untouched: #6f7a80;
+  --gauge-track: #26364f;
+  --st-untouched: #6f80a0;
   --st-weak: #f06b62;
-  --st-practicing: #7da3ee;
+  --st-practicing: #6ea4ff;
   --st-strong: #4cc384;
   --overlay: rgba(0, 0, 0, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
+
 
 /* ---- 基本 ---- */
 

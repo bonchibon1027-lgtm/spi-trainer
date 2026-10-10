@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f6f7f2" />
+    <meta name="theme-color" content="#1f6fe5" />
     <meta name="description" content="SPIの言語・非言語を、解き方ノート・ドリル・自動復習で練習する個人用アプリ（非公式）" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -17,7 +17,9 @@
       try {
         var d = JSON.parse(localStorage.getItem('spi-trainer:data') || 'null')
         var t = d && d.settings && d.settings.theme
-        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+        // 既定はライト。「自動」は v2（v1.0）以降に自分で選んだときだけ（storage.ts の migrate と同じ考え方）
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+        else if (!(t === 'auto' && d.version === 2)) document.documentElement.setAttribute('data-theme', 'light')
       } catch (e) {}
     </script>
   </head>

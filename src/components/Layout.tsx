@@ -10,7 +10,7 @@ import { TabIcon, type TabIconName } from './Icons'
 type Tab = { to: string; label: string; icon: TabIconName; match: (p: string) => boolean }
 
 const TABS: Tab[] = [
-  { to: '/', label: 'ホーム', icon: 'home', match: (p) => p === '/' },
+  { to: '/', label: 'ホーム', icon: 'home', match: (p) => p === '/' || p.startsWith('/mock') },
   {
     to: '/topics',
     label: '分野',

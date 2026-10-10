@@ -99,19 +99,84 @@ export type AuthoredQuestion = Omit<
   targetSec?: number
 }
 
-/** 解き方ノート（src/content/notes/<topic>.json） */
+// ---- 解き方ノート（src/content/notes/<topic>.json） ----
+// 方針: 抽象的な式の説明ではなく、具体的な数字の例題で1ステップずつ見せる。図を積極的に使う。
+
+/** 図や強調の色の役割。画面側で CSS 変数の色に対応させる */
+export type Tone = 'base' | 'accent' | 'ok' | 'ng' | 'warn' | 'muted'
+
+export type FlowBox = { title: string; lines?: string[]; tone?: Tone }
+export type TreeNode = { label: string; tone?: Tone; children?: TreeNode[] }
+
+/** ノートの図。画像ファイルではなくデータで書き、画面側が描く */
+export type Figure =
+  /** テープ図: 全体と部分の大きさを帯で表す（割合・比・損益・割引・分割払い・精算）。size は帯の長さの比 */
+  | {
+      type: 'tape'
+      rows: { label?: string; segments: { text: string; size: number; tone?: Tone }[]; total?: string }[]
+      caption?: string
+    }
+  /** 2つの集合のベン図（集合）。各部分に入る文字（人数など） */
+  | {
+      type: 'venn2'
+      labels: [string, string]
+      onlyA: string
+      both: string
+      onlyB: string
+      outside?: string
+      total?: string
+      caption?: string
+    }
+  /** 数直線・道のり図（速さ・旅人算・時刻）。at は位置（数値の大小で左右が決まる） */
+  | {
+      type: 'line'
+      points: { at: number; label: string; sub?: string }[]
+      spans?: { from: number; to: number; text: string; tone?: Tone }[]
+      caption?: string
+    }
+  /** 箱と記号の流れ（食塩水を混ぜる、確率のかけ算など）。文字列の要素は記号（"+", "×", "=", "→"） */
+  | { type: 'flow'; items: (FlowBox | string)[]; caption?: string }
+  /** 樹形図（場合の数・確率）。深さは3段まで */
+  | { type: 'tree'; nodes: TreeNode[]; caption?: string }
+  /** 表。highlight は強調するマス [rows の行番号, 列番号]（0 始まり） */
+  | { type: 'table'; table: Table; highlight?: [number, number][]; caption?: string }
+  /** 枠を横に並べる（推論の順位・座席、文の並べ替え）。head は枠の上の小さな見出し（"1位" など） */
+  | {
+      type: 'slots'
+      rows: { label?: string; cells: { head?: string; text: string; tone?: Tone }[] }[]
+      caption?: string
+    }
+
+/** ノートの解き方の1ステップ */
+export type NoteStep = {
+  /** 説明（1〜2文、短く） */
+  text: string
+  /** 計算式。目立たせて表示する（例: "300 × 0.04 = 12g"） */
+  calc?: string
+  figure?: Figure
+}
+
+/** 具体的な数字の例題と、その解き方 */
+export type NoteExample = {
+  stem: string
+  table?: Table
+  figure?: Figure
+  steps: NoteStep[]
+  answer: string
+}
+
 export type Note = {
   topic: TopicId
-  /** この分野で何を聞かれるか（2〜4文） */
+  /** この分野で何を聞かれるか（2〜3文） */
   summary: string
-  /** 覚える公式（少なく） */
-  formulas: { label: string; body: string }[]
-  /** 典型的な型と解き方の手順 */
-  patterns: { title: string; steps: string[] }[]
-  /** 例題（1〜2問）。途中の式を省略しない */
-  examples: { stem: string; table?: Table; steps: string[]; answer: string }[]
-  /** よくある間違い */
-  pitfalls: string[]
+  /** 最初に覚えること（2〜4個、各1行） */
+  keyPoints: string[]
+  /** 覚える公式。example には必ず具体的な数字で使った例を書く */
+  formulas: { label: string; body: string; example: string }[]
+  /** 典型的な型。型ごとに具体的な数字の例題で解き方を見せる */
+  patterns: { title: string; lead: string; example: NoteExample; point?: string }[]
+  /** よくある間違い（✗ 間違い → ○ 正しい） */
+  pitfalls: { wrong: string; right: string }[]
 }
 
 /** 分野の情報（src/data/topics.ts） */

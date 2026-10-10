@@ -26,7 +26,7 @@ export const TOPICS: TopicMeta[] = [
 ]
 
 /** 今の公開段階。2回目の公開（v1.0）で 2 にする */
-export const CURRENT_RELEASE: 1 | 2 = 1
+export const CURRENT_RELEASE: 1 | 2 = 2
 
 const byId = new Map(TOPICS.map((t) => [t.id, t]))
 

@@ -1,0 +1,1319 @@
+/* 解き方ノートと、ノートの図。色は index.css の CSS 変数だけを使う（ライト・ダーク共通）。
+   図は .fg-*、ノートの画面は .nt-* で始まる名前にして、他の画面の CSS とぶつからないようにしている。 */
+
+/* ================= 色の役割（tone）=================
+   --t-bg 地の色 / --t-bd 枠の色 / --t-fg 文字の色 */
+
+.fg-t-base {
+  --t-bg: var(--primary-soft);
+  --t-bd: var(--primary);
+  --t-fg: var(--text);
+}
+.fg-t-accent {
+  --t-bg: var(--primary);
+  --t-bd: var(--primary-strong);
+  --t-fg: var(--on-primary);
+}
+.fg-t-ok {
+  --t-bg: var(--ok-soft);
+  --t-bd: var(--ok);
+  --t-fg: var(--ok-text);
+}
+.fg-t-ng {
+  --t-bg: var(--ng-soft);
+  --t-bd: var(--ng);
+  --t-fg: var(--ng-text);
+}
+.fg-t-warn {
+  --t-bg: var(--warn-soft);
+  --t-bd: var(--warn);
+  --t-fg: var(--warn-text);
+}
+.fg-t-muted {
+  --t-bg: var(--surface-2);
+  --t-bd: var(--border);
+  --t-fg: var(--text-sub);
+}
+.fg-t-plain {
+  --t-bg: var(--surface);
+  --t-bd: var(--border);
+  --t-fg: var(--text);
+}
+
+/* ================= 図の共通 ================= */
+
+.fg {
+  margin: 0;
+  padding: 12px 10px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.fg-table {
+  padding: 0;
+  overflow: visible;
+  background: none;
+  border: none;
+}
+
+.fg-cap {
+  margin-top: 10px;
+  color: var(--text-sub);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.fg-table .fg-cap {
+  margin-top: 6px;
+}
+
+/* ---- テープ図 ---- */
+
+.fg-tp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fg-tp-label {
+  margin-bottom: 4px;
+  color: var(--text-sub);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.fg-tp-main {
+  max-width: 100%;
+}
+
+.fg-tp-bar {
+  display: flex;
+  gap: 3px;
+}
+
+.fg-tp-seg {
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background: var(--t-bg);
+  border: 2px solid var(--t-bd);
+  border-radius: 8px;
+  color: var(--t-fg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.fg-tp-seg.is-note {
+  padding: 6px 0;
+  font-size: 1rem;
+}
+
+.fg-tp-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.fg-tp-brace {
+  position: relative;
+  align-self: stretch;
+  height: 9px;
+  border: 2px solid var(--text-sub);
+  border-top: 0;
+  border-radius: 0 0 9px 9px;
+}
+
+.fg-tp-brace::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  height: 7px;
+  border-left: 2px solid var(--text-sub);
+  transform: translateX(-1px);
+}
+
+.fg-tp-total-text {
+  margin-top: 7px;
+  padding: 0 8px;
+  font-size: 0.97rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.fg-tp-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fg-tp-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 8px;
+  background: var(--t-bg);
+  border: 1.5px solid var(--t-bd);
+  border-radius: 999px;
+  color: var(--t-fg);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.fg-tp-note-mark {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+/* ---- ベン図 ---- */
+
+.fg-vn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fg-vn-total {
+  align-self: flex-start;
+  color: var(--text-sub);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.fg-vn-stage {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.fg-vn-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fg-vn-frame {
+  fill: var(--surface);
+  stroke: var(--text-sub);
+  stroke-width: 2;
+}
+
+.fg-vn-c {
+  stroke-width: 2.5;
+}
+
+.fg-vn-c.is-a {
+  fill: var(--primary);
+  fill-opacity: 0.2;
+  stroke: var(--primary);
+}
+
+.fg-vn-c.is-b {
+  fill: var(--warn);
+  fill-opacity: 0.24;
+  stroke: var(--warn);
+}
+
+.fg-vn-lab {
+  position: absolute;
+  max-width: 42%;
+  transform: translate(-50%, -50%);
+  font-size: 0.97rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.fg-vn-lab.is-a {
+  color: var(--primary-strong);
+}
+
+.fg-vn-lab.is-b {
+  color: var(--warn-text);
+}
+
+.fg-vn-reg {
+  position: absolute;
+  max-width: 33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  line-height: 1.25;
+  text-align: center;
+}
+
+.fg-vn-reg.is-both {
+  max-width: 22%;
+}
+
+.fg-vn-tag {
+  color: var(--text-sub);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fg-vn-val {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.fg-vn-out {
+  position: absolute;
+  right: 3.5%;
+  bottom: 2.5%;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+/* ---- 数直線・道のり図 ---- */
+
+.fg-line {
+  padding: 14px 12px 8px;
+}
+
+.fg-ln {
+  position: relative;
+  width: 100%;
+}
+
+.fg-ln-track {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  margin-top: -2px;
+  background: var(--text-sub);
+  border-radius: 2px;
+}
+
+.fg-ln-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: var(--primary);
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--primary);
+}
+
+.fg-ln-leader {
+  position: absolute;
+  width: 0;
+  margin-left: -1px;
+  border-left: 1.5px dashed var(--text-sub);
+}
+
+.fg-ln-pt {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.fg-ln-pt.is-c {
+  align-items: center;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.fg-ln-pt.is-r {
+  align-items: flex-start;
+  text-align: left;
+  transform: translateX(-6px);
+}
+
+.fg-ln-pt.is-l {
+  align-items: flex-end;
+  text-align: right;
+  transform: translateX(calc(-100% + 6px));
+}
+
+.fg-ln-pt-label {
+  font-size: 0.97rem;
+  font-weight: 800;
+}
+
+.fg-ln-pt-sub {
+  color: var(--text-sub);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-ln-span {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.fg-ln-span-text {
+  position: absolute;
+  bottom: 16px;
+  width: max-content;
+  max-width: 96%;
+  padding: 2px 10px;
+  background: var(--t-bg);
+  border: 1.5px solid var(--t-bd);
+  border-radius: 8px;
+  color: var(--t-fg);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.fg-ln-bracket {
+  position: absolute;
+  bottom: 4px;
+  height: 9px;
+  border: 3px solid var(--t-bd);
+  border-bottom: 0;
+}
+
+/* ---- 箱と記号の流れ ---- */
+
+.fg-fl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 2px;
+}
+
+.fg-fl-unit {
+  display: flex;
+  align-items: center;
+}
+
+.fg-fl-box {
+  min-width: 68px;
+  padding: 6px 8px;
+  background: var(--t-bg);
+  border: 2px solid var(--t-bd);
+  border-radius: 10px;
+  color: var(--t-fg);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.fg-fl-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.fg-fl-line {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.fg-fl-op {
+  padding: 0 5px;
+  color: var(--text-sub);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---- 樹形図 ---- */
+
+.fg-tr-scroll {
+  padding: 2px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fg-tn {
+  display: flex;
+  align-items: center;
+  width: max-content;
+}
+
+.fg-tn-label {
+  flex: none;
+  min-width: 34px;
+  padding: 4px 10px;
+  background: var(--t-bg);
+  border: 2px solid var(--t-bd);
+  border-radius: 8px;
+  color: var(--t-fg);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.fg-tn-start {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  background: var(--text-sub);
+  border-radius: 50%;
+}
+
+.fg-tn-no {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-sub);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+}
+
+.fg-tn-kids {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-left: 28px;
+}
+
+.fg-tn-kids::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 14px;
+  border-top: 2px solid var(--text-sub);
+  transform: translateY(-1px);
+}
+
+.fg-tn-kid {
+  position: relative;
+  padding: 3px 0;
+}
+
+.fg-tn-kid::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--text-sub);
+}
+
+.fg-tn-kid::after {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 14px;
+  border-top: 2px solid var(--text-sub);
+  transform: translateY(-1px);
+}
+
+.fg-tn-kid:first-child::before {
+  top: 50%;
+}
+
+.fg-tn-kid:last-child::before {
+  bottom: 50%;
+}
+
+.fg-tn-kid:only-child::before {
+  display: none;
+}
+
+.fg-tr-count {
+  margin-top: 8px;
+  color: var(--text-sub);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* ---- 表 ---- */
+
+.fg-tb-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.fg-tb {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.97rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-tb caption {
+  padding: 8px 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.fg-tb th,
+.fg-tb td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.fg-tb th {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+
+.fg-tb tr:last-child td {
+  border-bottom: none;
+}
+
+.fg-tb td:first-child,
+.fg-tb th:first-child {
+  text-align: left;
+}
+
+.fg-tb td.is-hl {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 2px var(--primary);
+  font-weight: 800;
+}
+
+.fg-tb-blank {
+  display: inline-block;
+  width: 2.2em;
+  height: 1.4em;
+  vertical-align: middle;
+  border: 1.5px dashed var(--border);
+  border-radius: 4px;
+}
+
+/* ---- 枠の並び ---- */
+
+.fg-sl {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fg-sl-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.fg-sl-label {
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-width: 1.4em;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.fg-sl-cells {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 6px;
+}
+
+.fg-sl-cell {
+  flex: 1 1 52px;
+  max-width: 96px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fg-sl-head {
+  color: var(--text-sub);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.fg-sl-box {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: var(--t-bg);
+  border: 2px solid var(--t-bd);
+  border-radius: 8px;
+  color: var(--t-fg);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.fg-sl-box.is-empty {
+  border-style: dashed;
+}
+
+/* ================= ノートの画面 ================= */
+
+.nt {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.nt p {
+  margin: 0;
+}
+
+.nt-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nt-kicker {
+  align-self: flex-start;
+  padding: 1px 12px;
+  background: var(--primary-soft);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.nt-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+/* 目次チップ（画面の上に貼りつく） */
+
+.nt-toc {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0 -16px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.nt-toc-list {
+  display: flex;
+  gap: 8px;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nt-toc-list::-webkit-scrollbar {
+  display: none;
+}
+
+.nt-chip {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.nt-chip:active {
+  background: var(--primary-soft);
+}
+
+/* セクション */
+
+.nt-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 68px;
+}
+
+.nt-h-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nt-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.nt-h::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 1.3em;
+  background: var(--primary);
+  border-radius: 3px;
+}
+
+.nt-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: 10px;
+  color: var(--primary-strong);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.nt-btn:active {
+  background: var(--primary-soft);
+}
+
+/* この分野で聞かれること */
+
+.nt-sum {
+  padding: 16px;
+  background: var(--primary-soft);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+}
+
+.nt-sum-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--primary-strong);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.nt-sum-text {
+  font-size: 1.02rem;
+  line-height: 1.9;
+}
+
+.nt-sent {
+  display: block;
+}
+
+.nt-sent + .nt-sent {
+  margin-top: 8px;
+}
+
+/* まず覚えること */
+
+.nt-kp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nt-kp li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.nt-no {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  background: var(--primary);
+  border-radius: 50%;
+  color: var(--on-primary);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 28px;
+  text-align: center;
+}
+
+.nt-kp-text {
+  font-size: 1.03rem;
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+/* 公式 */
+
+.nt-fm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nt-fm {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.nt-fm-label {
+  padding: 8px 14px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.nt-fm-body {
+  padding: 12px 14px 4px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.9;
+}
+
+.nt-fm-ex {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 12px 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.nt-badge {
+  flex: none;
+  margin-top: 3px;
+  padding: 1px 10px;
+  background: var(--primary);
+  border-radius: 999px;
+  color: var(--on-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.nt-fm-ex-text {
+  font-size: 0.99rem;
+  line-height: 1.8;
+}
+
+/* 型ごとの解き方（折りたたみ） */
+
+.nt-pats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nt-pat {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  scroll-margin-top: 68px;
+}
+
+.nt-pat-sum {
+  display: block;
+  cursor: pointer;
+  list-style: none;
+}
+
+.nt-pat-sum::-webkit-details-marker {
+  display: none;
+}
+
+.nt-pat-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.nt-pat-no {
+  flex: none;
+  padding: 1px 11px;
+  background: var(--on-primary);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.nt-pat-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.nt-chev {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin: 0 4px 3px 0;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s;
+}
+
+.nt-pat[open] .nt-chev {
+  margin: 3px 4px 0 0;
+  transform: rotate(-135deg);
+}
+
+.nt-pat-lead {
+  display: block;
+  padding: 11px 14px;
+  font-size: 0.99rem;
+  line-height: 1.75;
+}
+
+.nt-pat[open] .nt-pat-lead {
+  border-bottom: 1px dashed var(--border);
+}
+
+.nt-pat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 14px 18px;
+}
+
+/* 例題 */
+
+.nt-ex {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+
+.nt-tag {
+  align-self: flex-start;
+  padding: 1px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.nt-tag-ex {
+  background: var(--text-sub);
+  color: var(--surface);
+}
+
+.nt-stem {
+  font-size: 1.03rem;
+  line-height: 1.9;
+}
+
+/* ステップ */
+
+.nt-steps-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nt-steps-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--primary-strong);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.nt-steps-h::after {
+  content: '';
+  flex: 1;
+  border-top: 1.5px solid var(--border);
+}
+
+.nt-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nt-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.nt-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 32px;
+  bottom: -18px;
+  border-left: 2px solid var(--border);
+}
+
+.nt-step .nt-no {
+  position: relative;
+  margin-top: 0;
+}
+
+.nt-step-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nt-step-text {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.nt-calc {
+  padding: 8px 12px;
+  background: var(--primary-soft);
+  border-left: 4px solid var(--primary);
+  border-radius: 6px 10px 10px 6px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Roboto Mono', monospace;
+  font-size: 1.12rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.7;
+}
+
+/* 答え・コツ */
+
+.nt-ans {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--ok-soft);
+  border: 2px solid var(--ok);
+  border-radius: 12px;
+}
+
+.nt-ans-tag {
+  flex: none;
+  padding: 1px 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--ok);
+  border-radius: 999px;
+  color: var(--ok-text);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.nt-ans-text {
+  min-width: 0;
+  color: var(--ok-text);
+  font-size: 1.18rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.nt-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--warn-soft);
+  border: 1.5px solid var(--warn);
+  border-radius: 12px;
+}
+
+.nt-tip-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  color: var(--warn-text);
+}
+
+.nt-tip-main {
+  min-width: 0;
+}
+
+.nt-tip-label {
+  display: block;
+  color: var(--warn-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.nt-tip-text {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.8;
+}
+
+/* よくある間違い */
+
+.nt-pit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nt-pit {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.nt-pit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.nt-pit-row.is-ng {
+  background: var(--ng-soft);
+}
+
+.nt-pit-row.is-ok {
+  background: var(--ok-soft);
+}
+
+.nt-pit-row + .nt-pit-row {
+  border-top: 1px solid var(--border);
+}
+
+.nt-mark {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  background: var(--surface);
+  border: 2.5px solid;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 25px;
+  text-align: center;
+}
+
+.is-ng .nt-mark {
+  border-color: var(--ng);
+  color: var(--ng-text);
+}
+
+.is-ok .nt-mark {
+  border-color: var(--ok);
+  color: var(--ok-text);
+}
+
+.nt-pit-tag {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.is-ng .nt-pit-tag {
+  color: var(--ng-text);
+}
+
+.is-ok .nt-pit-tag {
+  color: var(--ok-text);
+}
+
+.nt-pit-text {
+  line-height: 1.8;
+}
+
+/* 準備中 */
+
+.nt-empty {
+  padding: 22px 16px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-sub);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* 動きを減らす設定のとき、開閉の回転アニメーションを止める */
+@media (prefers-reduced-motion: reduce) {
+  .nt-chev {
+    transition: none;
+  }
+}
